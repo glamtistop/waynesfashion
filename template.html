@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{title}}</title>
+<meta name="description" content="{{desc}}">
+<meta name="robots" content="{{robots}}">
+<link rel="canonical" href="{{url}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Wayne's Fashion">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{desc}}">
+<meta property="og:url" content="{{url}}">
+<meta name="twitter:card" content="summary">
+<meta name="geo.region" content="US-CA">
+<meta name="geo.placename" content="Altadena">
+<meta name="theme-color" content="#111111">
+<meta name="format-detection" content="telephone=yes">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Pacifico&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">{{jsonld}}</script>
+</head>
+<body>
+<a class="skip" href="#app">Skip to content</a>
+<div id="announce" class="announce"></div>
+<header class="topbar">
+  <a href="/" class="brand" aria-label="Wayne's Fashion home">
+    <img id="logoImg" alt="" hidden>
+    <span id="logoText"><span class="script">Wayne's</span> <span class="block">FASHION</span></span>
+  </a>
+  <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="nav">☰</button>
+  <nav id="nav" class="nav" aria-label="Main">{{nav}}</nav>
+</header>
+<main id="app" tabindex="-1">
+<h1>{{h1}}</h1>
+<p>{{desc}}</p>
+<p>{{address}} • <a href="tel:{{tel}}">{{phone}}</a></p>
+</main>
+<footer class="footer" id="footer">{{nav}}</footer>
+<script src="/seo.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>

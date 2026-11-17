@@ -1,4 +1,4 @@
-/* Wayne's Fashion — single-page site. All content lives in data.json (editable in #/admin). */
+/* Wayne's Fashion — single-page site. All content lives in data.json (editable in /admin/). */
 (() => {
 'use strict';
 const LS_DATA = 'wf_data', LS_CART = 'wf_cart', LS_ORDERS = 'wf_orders';
@@ -18,11 +18,16 @@ async function init() {
   const local = load(LS_DATA, null);
   if (local) D = local;
   else {
-    try { D = await (await fetch('data.json', { cache: 'no-cache' })).json(); }
+    try { D = await (await fetch('/data.json', { cache: 'no-cache' })).json(); }
     catch { app.innerHTML = '<div class="card warn">Could not load site data. Please open the site through a web server.</div>'; return; }
   }
   $('#menuBtn').onclick = () => { const n = $('#nav'); n.classList.toggle('open'); $('#menuBtn').setAttribute('aria-expanded', n.classList.contains('open')); };
-  window.addEventListener('hashchange', route);
+  window.addEventListener('popstate', route);
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="/"]');
+    if (!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || a.hasAttribute('download')) return;
+    e.preventDefault(); go(a.getAttribute('href'));
+  });
   chrome(); route();
 }
 
@@ -33,66 +38,80 @@ function chrome() {
   else { $('#logoImg').hidden = true; $('#logoText').hidden = false; }
   const navCats = D.categories.filter(c => c.showInNav);
   $('#nav').innerHTML = [
-    ['#/', 'Home'], ...(D.trees.enabled ? [['#/trees', '🎄 Christmas Trees', 'tree']] : []),
-    ['#/shop', 'Shop All'], ...navCats.map(c => ['#/c/' + c.id, c.title]),
-    ['#/cart', 'Cart (' + cart.length + ')'], ['#/contact', 'Contact']
+    ['/', 'Home'], ...(D.trees.enabled ? [['/christmas-trees/', '🎄 Christmas Trees', 'tree']] : []),
+    ['/shop/', 'Shop All'], ...navCats.map(c => ['/' + c.id + '/', c.title]),
+    ['/request-an-item/', 'Request an Item'], ['/cart/', '🛒 Cart (' + cart.length + ')'], ['/contact/', 'Contact']
   ].map(([h, t, cls]) => `<a href="${h}" class="${cls || ''}">${esc(t)}</a>`).join('');
   $('#footer').innerHTML = `
     <div class="script" style="font-size:1.4rem">${esc(s.name)}</div>
     <div class="slogan" style="font-size:1rem">${esc(s.slogan)}</div>
     <p>${esc(s.address)} • <a href="${telHref(s.phone)}">${esc(s.phone)}</a> • <a href="mailto:${esc(s.email)}">${esc(s.email)}</a></p>
-    <p><a href="#/contact">Contact</a><a href="#/privacy">Privacy Policy</a><a href="#/refund">Refund Policy</a><a href="#/admin">Admin</a></p>
+    <p><a href="/request-an-item/">Request an Item</a><a href="/contact/">Contact</a><a href="/privacy-policy/">Privacy Policy</a><a href="/refund-policy/">Refund Policy</a><a href="/admin/">Admin</a></p>
     <p>© ${new Date().getFullYear()} ${esc(s.name)}. ${esc(s.est)}</p>`;
 }
 
+function go(url) { history.pushState(null, '', url); route(); }
 function route() {
-  const h = location.hash.replace(/^#/, '') || '/';
-  const [, a, b] = h.split('/');
-  $('#nav').classList.remove('open');
-  document.querySelectorAll('#nav a').forEach(x => x.classList.toggle('active', x.getAttribute('href') === '#' + h));
-  const r = { '': home, shop, c: () => category(b), trees, cart: cartPage, checkout, contact, privacy: () => policy('Privacy Policy', D.policies.privacy), refund: () => policy('Refund Policy', D.policies.refund), order: () => orderDone(b), admin }[a || ''];
-  (r || home)();
+  const path = location.pathname.replace(/index\.html$/, ''), seg = path.split('/').filter(Boolean)[0] || '';
+  $('#nav').classList.remove('open'); $('#menuBtn').setAttribute('aria-expanded', 'false');
+  const key = '/' + (seg ? seg + '/' : '');
+  document.querySelectorAll('#nav a').forEach(x => { const on = x.getAttribute('href') === key; x.classList.toggle('active', on); on ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current'); });
+  const fixed = { '': home, shop, 'christmas-trees': trees, 'request-an-item': inquiry, cart: cartPage, checkout, contact,
+    'privacy-policy': () => policy('Privacy Policy', D.policies.privacy), 'refund-policy': () => policy('Refund Policy', D.policies.refund),
+    order: () => orderDone(new URLSearchParams(location.search).get('id')), admin };
+  if (fixed[seg]) fixed[seg](); else if (D.categories.some(c => c.id === seg)) category(seg); else notFound();
+  meta(key);
   window.scrollTo(0, 0); app.focus({ preventScroll: true });
-  document.title = (document.querySelector('#app h1, #app h2')?.textContent || '') + " | Wayne's Fashion";
 }
+function meta(key) {
+  const pg = WF_SEO.pages(D).find(p => p.path === key) || { title: "Page not found | Wayne's Fashion", desc: '', noindex: true };
+  document.title = pg.title;
+  const set = (sel, attr, val) => { const el = document.head.querySelector(sel); if (el) el.setAttribute(attr, val); };
+  set('meta[name="description"]', 'content', pg.desc); set('meta[property="og:title"]', 'content', pg.title);
+  set('meta[property="og:description"]', 'content', pg.desc); set('meta[property="og:url"]', 'content', WF_SEO.DOMAIN + key);
+  set('link[rel="canonical"]', 'href', WF_SEO.DOMAIN + key); set('meta[name="robots"]', 'content', pg.noindex ? 'noindex,nofollow' : 'index,follow');
+}
+function notFound() { app.innerHTML = `<h1>Page not found</h1><div class="card">That page doesn't exist. <a href="/">Go to the home page</a> or <a href="/shop/">shop all departments</a>.</div>`; }
 
 /* ---------- Public pages ---------- */
 function tiles(cats) {
-  return `<div class="grid">${cats.map(c => `<a class="tile" href="#/c/${c.id}" style="background:linear-gradient(160deg,${c.color},#000)">
+  return `<div class="grid">${cats.map(c => `<a class="tile" href="/${c.id}/" style="background:linear-gradient(160deg,${c.color},#000)">
     <h3>${esc(c.title)}</h3><small>${esc(c.subtitle)}</small></a>`).join('')}
-    ${D.trees.enabled ? `<a class="tile" href="#/trees" style="background:linear-gradient(160deg,#1b5e20,#000)"><h3>🎄 Christmas Trees</h3><small>Pickup • Delivery • Ship (CA)</small></a>` : ''}</div>`;
+    ${D.trees.enabled ? `<a class="tile" href="/christmas-trees/" style="background:linear-gradient(160deg,#1b5e20,#000)"><h3>🎄 Christmas Trees</h3><small>Pickup • Delivery • Ship (CA)</small></a>` : ''}</div>`;
 }
 function home() {
   const s = D.site;
   app.innerHTML = `
   <section class="hero">
     <span class="est">★ ${esc(s.est)} ★</span>
-    ${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(s.name)} logo" style="max-height:220px;margin:12px auto">` : `<div><span class="script">Wayne's</span> <span class="block">FASHION</span></div>`}
+    <h1 class="hero-title">${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(s.name)} — Altadena clothing store and custom screen printing" style="max-height:220px;margin:12px auto">` : `<span class="script">Wayne's</span> <span class="block">FASHION</span>`}</h1>
     <div class="slogan">${esc(s.slogan)}</div>
     <p style="max-width:640px;margin:10px auto">${esc(s.heroText)}</p>
     <div class="tagline">${esc(s.tagline)}</div>
     <p style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      ${D.trees.enabled ? `<a class="btn" href="#/trees">🎄 Order a Christmas Tree</a>` : ''}<a class="btn gold" href="#/shop">Shop Now</a></p>
+      ${D.trees.enabled ? `<a class="btn" href="/christmas-trees/">🎄 Order a Christmas Tree</a>` : ''}<a class="btn gold" href="/shop/">Shop Now</a><a class="btn ghost" href="/request-an-item/">Request an Item</a></p>
   </section>
   ${tiles(D.categories.filter(c => c.showInNav))}
   <div class="infobar"><span>📍 ${esc(s.address)}</span><a href="${telHref(s.phone)}">📞 ${esc(s.phone)}</a><span>🌐 ${esc(s.website)}</span></div>
-  <div class="card"><h3>How ordering works</h3>
+  <div class="card cta"><div><h2>Looking for something specific?</h2><p>A certain size, team, color or a custom print? Tell us what you need and we'll get back to you with price and availability.</p></div><a class="btn" href="/request-an-item/">Request an Item →</a></div>
+  <div class="card"><h2>How ordering works</h2>
    <p>1. Choose your items or tree • 2. Pick <b>Pickup</b>, <b>Local Delivery</b> or <b>Ship (California)</b> • 3. Pay with Zelle, Venmo, Cash App or card (Square) • 4. We confirm by text/email and coordinate your time.</p></div>`;
 }
 function shop() {
-  app.innerHTML = `<div class="page-head"><h1>Shop All</h1><p class="note">Every department at Wayne's Fashion.</p></div>
+  app.innerHTML = `<div class="page-head"><h1>Shop All Departments</h1><p class="note">Every department at Wayne's Fashion.</p></div>
   ${tiles(D.categories)}
   ${D.categories.map(c => c.products.length ? `<h2>${esc(c.title)}</h2>${productGrid(c)}` : '').join('')}`;
   bindAdd();
 }
 function productGrid(c) {
-  if (!c.products.length) return `<div class="card note">Products coming soon — call <a href="${telHref(D.site.phone)}">${esc(D.site.phone)}</a> or stop by the store.</div>`;
+  if (!c.products.length) return `<div class="card note"><p>We're adding products to this section. Don't see what you want?</p><a class="btn" href="/request-an-item/?dept=${encodeURIComponent(c.title)}">Request an Item from ${esc(c.title)}</a> <a class="btn ghost" href="${telHref(D.site.phone)}">Call ${esc(D.site.phone)}</a></div>`;
   return `<div class="products">${c.products.map((p, i) => `<div class="product">
-    <div class="img" style="${p.image ? `background-image:url('${esc(p.image)}')` : ''}">${p.image ? '' : '👕'}</div>
+    <div class="img">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : '👕'}</div>
     <div class="body"><b>${esc(p.name)}</b><span class="note">${esc(p.description || '')}</span>
     <span class="price">${money(p.price)}</span>
     ${p.options ? `<select data-opt="${c.id}:${i}" aria-label="Option">${p.options.split(',').map(o => `<option>${esc(o.trim())}</option>`).join('')}</select>` : ''}
-    ${p.soldOut ? '<span class="warn">Sold out</span>' : `<button class="btn small" data-add="${c.id}:${i}">Add to Cart</button>`}</div></div>`).join('')}</div>`;
+    ${p.soldOut ? '<span class="warn">Sold out</span>' : `<button class="btn small" data-add="${c.id}:${i}">Add to Cart</button>`}
+    <a class="note" href="/request-an-item/?dept=${encodeURIComponent(c.title)}&item=${encodeURIComponent(p.name)}">Ask about this item</a></div></div>`).join('')}</div>`;
 }
 function bindAdd() {
   app.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
@@ -106,8 +125,9 @@ function category(id) {
   const c = D.categories.find(x => x.id === id);
   if (!c) return home();
   app.innerHTML = `<div class="page-head" style="border-color:${c.color}"><h1>${esc(c.title)}</h1><p><b>${esc(c.subtitle)}</b></p><p>${esc(c.description)}</p></div>
-  ${id === 'screen-printing' ? `<div class="card"><h3>Request a custom print quote</h3><p>Send us your design, quantity and sizes. <a class="btn small" href="mailto:${esc(D.site.email)}?subject=Custom%20printing%20quote">Email us</a> <a class="btn small gold" href="${telHref(D.site.phone)}">Call</a></p></div>` : ''}
-  ${productGrid(c)}`;
+  ${id === 'screen-printing' ? `<div class="card"><h2>Request a custom print quote</h2><p>Send us your design, quantity and sizes. <a class="btn small" href="/request-an-item/?dept=${encodeURIComponent(c.title)}">Request a Quote</a> <a class="btn small gold" href="${telHref(D.site.phone)}">Call</a></p></div>` : ''}
+  ${productGrid(c)}
+  ${c.products.length ? `<div class="card cta"><div><h2>Don't see it?</h2><p>Ask us — we can often get it or make it.</p></div><a class="btn" href="/request-an-item/?dept=${encodeURIComponent(c.title)}">Request an Item →</a></div>` : ''}`;
   bindAdd();
 }
 
@@ -143,7 +163,7 @@ function trees() {
   drawHeights(); calc();
   f.addEventListener('change', e => { if (e.target.name === 'type') drawHeights(); calc(); });
   f.addEventListener('input', calc);
-  f.onsubmit = e => { e.preventDefault(); cart.push(treeItem(f)); save(LS_CART, cart); chrome(); location.hash = '#/checkout'; };
+  f.onsubmit = e => { e.preventDefault(); cart.push(treeItem(f)); save(LS_CART, cart); chrome(); go('/checkout/'); };
 }
 function treeItem(f) {
   const T = D.trees, t = T.types[+f.type.value], h = T.heights[+(f.height?.value || 0)], stand = f.stand.value;
@@ -161,12 +181,12 @@ function totals() {
   return { sub, tba, f };
 }
 function cartPage() {
-  if (!cart.length) { app.innerHTML = `<h1>Your Cart</h1><div class="card">Your cart is empty. <a href="#/shop">Shop now</a>${D.trees.enabled ? ' or <a href="#/trees">order a Christmas tree</a>' : ''}.</div>`; return; }
+  if (!cart.length) { app.innerHTML = `<h1>Your Cart</h1><div class="card">Your cart is empty. <a href="/shop/">Shop now</a>${D.trees.enabled ? ' or <a href="/christmas-trees/">order a Christmas tree</a>' : ''}.</div>`; return; }
   const { sub, tba } = totals();
   app.innerHTML = `<h1>Your Cart</h1><div class="card scroll-x"><table class="admin"><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr>
   ${cart.map((i, k) => `<tr><td><b>${esc(i.name)}</b>${i.stand ? `<br><span class="note">${esc(i.stand)}</span>` : ''}</td><td><input type="number" min="1" value="${i.qty}" data-q="${k}" style="width:70px"></td><td>${money(i.price)}</td><td><button class="btn small ghost" data-rm="${k}">Remove</button></td></tr>`).join('')}
   </table><p class="total">Subtotal: ${money(sub)}${tba ? ' + items priced by our team' : ''}</p>
-  <a class="btn" href="#/checkout">Checkout →</a> <a class="btn ghost" href="#/shop">Keep shopping</a></div>`;
+  <a class="btn" href="/checkout/">Checkout →</a> <a class="btn ghost" href="/shop/">Keep shopping</a></div>`;
   app.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { cart.splice(+b.dataset.rm, 1); save(LS_CART, cart); chrome(); cartPage(); });
   app.querySelectorAll('[data-q]').forEach(b => b.onchange = () => { cart[+b.dataset.q].qty = Math.max(1, +b.value || 1); save(LS_CART, cart); cartPage(); });
 }
@@ -211,7 +231,7 @@ function checkout() {
     <h3>4. Payment method</h3>
     <div class="choices">${D.payments.map((p, i) => `<label class="choice"><input type="radio" name="pay" value="${i}" ${i ? '' : 'checked'}><span><b>${esc(p.name)}</b></span></label>`).join('')}</div>
     <p class="note">${esc(D.paymentInstructions)}</p>
-    <label class="choice" style="margin-top:12px"><input type="checkbox" name="agree" required><span>I agree to receive order texts and accept the <a href="#/refund">Refund Policy</a> and <a href="#/privacy">Privacy Policy</a>. *</span></label>
+    <label class="choice" style="margin-top:12px"><input type="checkbox" name="agree" required><span>I agree to receive order texts and accept the <a href="/refund-policy/">Refund Policy</a> and <a href="/privacy-policy/">Privacy Policy</a>. *</span></label>
     <div class="summary"><div id="sumLines" class="note"></div><div class="total" id="coTotal"></div>
       <div id="coErr"></div><button class="btn" type="submit" style="width:100%;margin-top:8px">Place Order & Go to Payment →</button></div>
   </form>`;
@@ -251,7 +271,7 @@ function checkout() {
     };
     const all = load(LS_ORDERS, []); all.unshift(order); save(LS_ORDERS, all);
     sendOrder(order);
-    cart = []; save(LS_CART, cart); chrome(); location.hash = '#/order/' + id;
+    cart = []; save(LS_CART, cart); chrome(); go('/order/?id=' + id);
   };
 }
 function orderText(o) {
@@ -286,6 +306,61 @@ function orderDone(id) {
 function payCard(p) {
   return `<div class="card"><b>${esc(p.name)}</b>${p.qr ? `<img src="${esc(p.qr)}" alt="${esc(p.name)} QR code">` : '<div class="qr-ph">QR code coming soon</div>'}
   ${p.handle ? (/^https?:/.test(p.handle) ? `<a class="btn small" href="${esc(p.handle)}" target="_blank" rel="noopener">Open ${esc(p.name)}</a>` : `<div><b>${esc(p.handle)}</b></div>`) : ''}<div class="note">${esc(p.note)}</div></div>`;
+}
+
+
+/* ---------- Request an item / quote ---------- */
+const LS_INQ = 'wf_inquiries';
+function inquiry() {
+  const s = D.site, q = new URLSearchParams(location.search), F = D.fulfillment;
+  const depts = [...D.categories.map(c => c.title), ...(D.trees.enabled ? ['Christmas Trees'] : []), 'Bulk / Team / Event Order', 'Something else'];
+  const I = D.inquiry || {};
+  app.innerHTML = `<div class="page-head"><h1>${esc(I.title || 'Request an Item or Quote')}</h1>
+   <p>${esc(I.intro || '')}</p></div>
+  <div class="steps"><div><b>1</b>Tell us what you need</div><div><b>2</b>We reply with price & availability</div><div><b>3</b>Pay, then pickup, delivery or shipping</div></div>
+  <form id="iq" class="card" novalidate>
+    <h2>What are you looking for?</h2>
+    <label for="idept">Department *</label><select id="idept" name="dept">${depts.map(d => `<option ${q.get('dept') === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>
+    <label for="iitem">Item you want *</label><input id="iitem" name="item" required value="${esc(q.get('item') || '')}" placeholder="e.g. Black hoodie with my logo, fitted cap, phone charger">
+    <div class="row"><div><label for="isize">Size / color / style</label><input id="isize" name="size" placeholder="e.g. XL, royal blue"></div>
+      <div><label for="iqty">Quantity</label><input id="iqty" name="qty" type="number" min="1" value="1" inputmode="numeric"></div></div>
+    <div class="row"><div><label for="idate">Needed by</label><input id="idate" name="date" type="date" min="${isoLocal(new Date())}"></div>
+      <div><label for="ibudget">Budget (optional)</label><input id="ibudget" name="budget" placeholder="e.g. $50, or $15 per shirt"></div></div>
+    <label for="idet">Details *</label><textarea id="idet" name="details" required placeholder="Describe the item, design, text, colors, or anything else that helps us find or make it."></textarea>
+    <p class="note">Have a photo or design file? After you send this, reply to our email or text it to ${esc(s.phone)}.</p>
+    <h2>How would you like to get it?</h2>
+    <div class="choices">${[F.pickupEnabled && 'Pick up at store', F.deliveryEnabled && 'Local delivery', F.shipEnabled && 'Ship within California', 'Not sure yet'].filter(Boolean).map((t, i) => `<label class="choice"><input type="radio" name="how" value="${esc(t)}" ${i ? '' : 'checked'}><span><b>${esc(t)}</b></span></label>`).join('')}</div>
+    <h2>Your contact info</h2>
+    <div class="row"><div><label for="iname">Full name *</label><input id="iname" name="name" autocomplete="name" required></div>
+      <div><label for="iphone">Mobile phone *</label><input id="iphone" name="phone" type="tel" autocomplete="tel" required></div></div>
+    <label for="iemail">Email *</label><input id="iemail" name="email" type="email" autocomplete="email" required>
+    <label>Best way to reach you</label>
+    <div class="choices">${['Text', 'Call', 'Email'].map((t, i) => `<label class="choice"><input type="radio" name="reach" value="${t}" ${i ? '' : 'checked'}><span><b>${t}</b></span></label>`).join('')}</div>
+    <div id="iqErr" style="margin-top:12px"></div>
+    <button class="btn" type="submit" style="width:100%;margin-top:12px">Send My Request →</button>
+    <p class="note">No payment now. By sending you agree to be contacted about this request. See our <a href="/privacy-policy/">Privacy Policy</a>.</p>
+  </form>`;
+  const f = $('#iq');
+  f.onsubmit = async e => {
+    e.preventDefault(); const err = [];
+    ['item', 'details', 'name', 'phone', 'email'].forEach(k => !f[k].value.trim() && err.push(k));
+    if (f.email.value && !/^\S+@\S+\.\S+$/.test(f.email.value)) err.push('valid email');
+    if (err.length) { $('#iqErr').innerHTML = '<div class="warn" role="alert">Please complete: ' + esc(err.join(', ')) + '</div>'; return; }
+    const r = { id: 'RQ' + Date.now().toString(36).toUpperCase().slice(-6), created: new Date().toLocaleString(), dept: f.dept.value, item: f.item.value.trim(), size: f.size.value.trim(), qty: f.qty.value, date: f.date.value, budget: f.budget.value.trim(), details: f.details.value.trim(), how: f.how.value, name: f.name.value.trim(), phone: f.phone.value.trim(), email: f.email.value.trim(), reach: f.reach.value };
+    const all = load(LS_INQ, []); all.unshift(r); save(LS_INQ, all);
+    let sent = false;
+    if (s.orderEndpoint) { try { const res = await fetch(s.orderEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ _subject: `Item request ${r.id} — ${r.name}`, email: r.email, request_id: r.id, request: inqText(r) }) }); sent = res.ok; } catch { } }
+    const mail = `mailto:${s.email}?subject=${encodeURIComponent('Item request ' + r.id + ' — ' + r.item)}&body=${encodeURIComponent(inqText(r))}`;
+    app.innerHTML = `<h1>${sent ? 'Request sent! 🎉' : 'One more step'}</h1>
+     ${sent ? `<div class="card ok">Thanks, ${esc(r.name.split(' ')[0])}. Request <b>#${esc(r.id)}</b> was sent to our team. We'll reach you by ${esc(r.reach.toLowerCase())} with price and availability.</div>`
+      : `<div class="card warn">Request <b>#${esc(r.id)}</b> is ready. Tap the button below to send it to us by email, or call <a href="${telHref(s.phone)}">${esc(s.phone)}</a>.</div><p><a class="btn" href="${mail}">📧 Send Request by Email</a></p>`}
+     <div class="card"><h2>Your request</h2><pre style="white-space:pre-wrap;font-family:inherit">${esc(inqText(r))}</pre>
+     ${sent ? `<a class="btn ghost small" href="${mail}">Also email a copy / attach a photo</a> ` : ''}<a class="btn ghost small" href="/shop/">Back to shop</a></div>`;
+    window.scrollTo(0, 0);
+  };
+}
+function inqText(r) {
+  return `ITEM REQUEST ${r.id}\nSent: ${r.created}\n\nDepartment: ${r.dept}\nItem: ${r.item}\nSize/color/style: ${r.size || '-'}\nQuantity: ${r.qty || 1}\nNeeded by: ${r.date ? fmtDate(r.date) : '-'}\nBudget: ${r.budget || '-'}\nHow to receive: ${r.how}\n\nDetails: ${r.details}\n\nName: ${r.name}\nPhone: ${r.phone}\nEmail: ${r.email}\nBest way to reach: ${r.reach}`;
 }
 
 function contact() {
@@ -341,6 +416,7 @@ function aGeneral(p) {
   <div class="row"><div>${field('Address', s, 'address')}</div><div>${field('Phone', s, 'phone')}</div></div>
   <div class="row"><div>${field('Order / contact email', s, 'email')}</div><div>${field('Website', s, 'website')}</div></div>
   ${field('Store hours', s, 'hours')}
+  ${field('Request page title', (D.inquiry = D.inquiry || {}), 'title')}${field('Request page intro', D.inquiry, 'intro', 'textarea')}
   ${field('Order notification endpoint (e.g. Formspree URL — orders get emailed to you)', s, 'orderEndpoint')}
   ${field('Admin password', s, 'adminPassword')}</div>`;
 }
@@ -349,6 +425,7 @@ function aSections(p) {
   <details class="card" ${ci === 0 ? '' : ''}><summary><b style="color:${c.color}">■</b> <b>${esc(c.title)}</b> — ${c.products.length} products</summary>
    <div class="row"><div>${field('Section name', c, 'title')}</div><div>${field('Color', c, 'color', 'color')}</div></div>
    ${field('Subtitle', c, 'subtitle')}${field('Description', c, 'description', 'textarea')}${field('Show in top menu', c, 'showInNav', 'checkbox')}
+   ${field('Google title (SEO) — blank = automatic', c, 'seoTitle')}${field('Google description (SEO) — blank = automatic', c, 'seoDescription', 'textarea')}
    <p><button class="btn small ghost" data-up="${ci}">↑ Move up</button> <button class="btn small ghost" data-delsec="${ci}">Delete section</button></p>
    <h3>Products</h3>
    ${c.products.map((pr, pi) => `<div class="card"><div class="row"><div>${field('Name', pr, 'name')}</div><div>${field('Price ($)', pr, 'price', 'number')}</div></div>
@@ -397,6 +474,7 @@ function aPolicies(p) { p.innerHTML = `<div class="card">${field('Privacy Policy
 function aOrders(p) {
   const all = load(LS_ORDERS, []);
   p.innerHTML = `<div class="card note">Orders are emailed to you through the order endpoint (Site Info tab) and by the customer's payment-confirmation email. This list only shows orders placed on this device.</div>` +
+    (load(LS_INQ, []).map(r => `<details class="card"><summary><b>${esc(r.id)}</b> — item request — ${esc(r.name)} — ${esc(r.item)}</summary><pre style="white-space:pre-wrap">${esc(inqText(r))}</pre></details>`).join('')) +
     (all.length ? all.map(o => `<details class="card"><summary><b>${esc(o.id)}</b> — ${esc(o.customer.name)} — ${esc(o.method)} — ${fmtDate(o.date)} ${esc(o.ampm)}</summary><pre style="white-space:pre-wrap">${esc(orderText(o))}</pre></details>`).join('') : '<p>No orders on this device.</p>');
 }
 function aPublish(p) {
@@ -406,7 +484,7 @@ function aPublish(p) {
   $('#dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(D, null, 2)], { type: 'application/json' })); a.download = 'data.json'; a.click(); };
   $('#up').onchange = e => { const r = new FileReader(); r.onload = () => { try { D = JSON.parse(r.result); commit(); alert('Loaded'); admin(); } catch { alert('Invalid file'); } }; r.readAsText(e.target.files[0]); };
   $('#reset').onclick = () => { if (confirm('Discard all unpublished changes on this device?')) { localStorage.removeItem(LS_DATA); location.reload(); } };
-  $('#out').onclick = () => { sessionStorage.removeItem('wf_admin'); location.hash = '#/'; };
+  $('#out').onclick = () => { sessionStorage.removeItem('wf_admin'); go('/'); };
 }
 
 init();
