@@ -1,0 +1,72 @@
+{
+  "site": {
+    "name": "Wayne's Fashion",
+    "est": "EST. 1978",
+    "slogan": "Altadena Strong.. All Day Long",
+    "tagline": "Quality • Style • Value",
+    "address": "2308 N Lincoln Ave, Altadena, CA 91001",
+    "phone": "626-360-9820",
+    "email": "orders@waynesfashion.com",
+    "website": "waynesfashion.com",
+    "hours": "Mon–Sat 10am–7pm • Sun 11am–5pm",
+    "logo": "",
+    "heroText": "Custom screen printing, sportswear, casual clothing, music gear and accessories — serving Altadena since 1978.",
+    "announcement": "🎄 Christmas Tree Lot opens December 1 — order online for pickup or delivery!",
+    "orderEndpoint": "",
+    "adminPassword": "wayne1978"
+  },
+  "categories": [
+    { "id": "screen-printing", "title": "Screen Printing", "color": "#1a1a1a", "subtitle": "Custom Printing • Shirts • Hoodies • 3-D Printing", "description": "Bring us your design — we print it. Custom shirts, hoodies, team gear, event merch and 3-D printed items.", "showInNav": true, "products": [] },
+    { "id": "sportswear", "title": "Sportswear", "color": "#1e88e5", "subtitle": "Hats • Beanies • Hoodies", "description": "Fitted caps, snapbacks, beanies and hoodies for every team and every season.", "showInNav": true, "products": [] },
+    { "id": "casual-clothing", "title": "Men's & Women's Casual Clothing", "color": "#7b1fa2", "subtitle": "For Men • For Women", "description": "Everyday casual wear for men and women.", "showInNav": true, "products": [] },
+    { "id": "womens-apparel", "title": "Women's Apparel", "color": "#c2185b", "subtitle": "Shop women's styles", "description": "", "showInNav": false, "products": [] },
+    { "id": "mens-apparel", "title": "Men's Apparel", "color": "#283593", "subtitle": "Shop men's styles", "description": "", "showInNav": false, "products": [] },
+    { "id": "music", "title": "Music", "color": "#f9a825", "subtitle": "USB Drives • Speakers", "description": "Bluetooth speakers, USB drives and music accessories.", "showInNav": true, "products": [] },
+    { "id": "accessories", "title": "Accessories", "color": "#43a047", "subtitle": "Phone Chargers • Adapters • Cables • And More", "description": "Phone chargers, adapters, cables, power banks and more.", "showInNav": true, "products": [] },
+    { "id": "seasonal", "title": "Seasonal", "color": "#c62828", "subtitle": "Holiday & seasonal items", "description": "Seasonal and holiday items — check back often.", "showInNav": false, "products": [] }
+  ],
+  "trees": {
+    "enabled": true,
+    "openDate": "2026-12-01",
+    "intro": "Fresh Christmas trees at Wayne's Fashion! Pick your tree, choose pickup, local delivery or California shipping, and pay online. Orders must be placed at least 24 hours in advance.",
+    "types": [
+      { "name": "Noble Fir", "description": "Strong branches, long-lasting, great for heavy ornaments.", "image": "" },
+      { "name": "Douglas Fir", "description": "Classic full shape with a sweet scent.", "image": "" },
+      { "name": "Nordmann Fir", "description": "Soft, glossy needles that hold well.", "image": "" },
+      { "name": "Grand Fir", "description": "Citrus fragrance, soft needles.", "image": "" }
+    ],
+    "heights": [
+      { "label": "4–5 ft", "prices": {} },
+      { "label": "5–6 ft", "prices": {} },
+      { "label": "6–7 ft", "prices": {} },
+      { "label": "7–8 ft", "prices": {} },
+      { "label": "8–9 ft", "prices": {} },
+      { "label": "9–10 ft", "prices": {} }
+    ],
+    "standPrice": "",
+    "standInstallPrice": ""
+  },
+  "fulfillment": {
+    "pickupEnabled": true,
+    "pickupNote": "Pick up at 2308 N Lincoln Ave, Altadena. We will message you when your order is ready.",
+    "deliveryEnabled": true,
+    "deliveryFee": "25",
+    "deliveryNote": "Local delivery within 5 miles of 91001 (Altadena) and 3 miles of 90015 (Downtown LA). Choose AM or PM — we'll text you available time windows and again when we're on the way.",
+    "deliveryZips": ["91001","91101","91103","91104","91105","91106","91107","91011","91024","91030","91031","91108","90015","90006","90007","90014","90017","90021","90071","90013","90079","90057","90018","90037","90011","90012","90010"],
+    "shipEnabled": true,
+    "shipFee": "",
+    "shipNote": "Shipping available to addresses in California only. Shipping cost confirmed by our team before payment.",
+    "leadHours": 24
+  },
+  "payments": [
+    { "name": "Zelle", "handle": "", "qr": "", "note": "Include your order number in the memo." },
+    { "name": "Venmo", "handle": "", "qr": "", "note": "Include your order number in the note." },
+    { "name": "Cash App", "handle": "", "qr": "", "note": "Include your order number in the note." },
+    { "name": "Square (Debit / Credit Card)", "handle": "", "qr": "", "note": "Scan or tap the link and enter your card details on Square's secure page." }
+  ],
+  "paymentInstructions": "Payment is required before delivery or pickup. After you pay, email your payment confirmation (screenshot) and order number to us. We'll verify it, confirm your order by text/email and coordinate your delivery window.",
+  "policies": {
+    "privacy": "Wayne's Fashion respects your privacy.\n\nWhat we collect: your name, phone number, email, address and order details — only so we can fill and deliver your order.\n\nHow we use it: to process orders, contact you about delivery times, and send order updates by text or email. We never sell or rent your information.\n\nPayments: payments are made through Zelle, Venmo, Cash App or Square. We do not store your card details on this website.\n\nText messages: by placing an order you agree to receive order-related texts. Message and data rates may apply.\n\nQuestions? Call 626-360-9820 or visit us at 2308 N Lincoln Ave.",
+    "refund": "Clothing & accessories: unworn items with tags may be returned within 14 days with receipt for exchange or store credit.\n\nCustom / screen-printed items: custom orders are made just for you and are final sale once printing begins.\n\nChristmas trees: orders may be cancelled for a full refund up to 24 hours before scheduled pickup or delivery. Once a tree is cut, netted or out for delivery it is final sale. If there is a problem with your tree, contact us within 48 hours and we'll make it right.\n\nDelivery fees are non-refundable once the delivery has been made.\n\nTo request a refund, call 626-360-9820 or visit the store."
+  }
+}
